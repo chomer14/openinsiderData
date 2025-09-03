@@ -153,7 +153,6 @@ class OpenInsiderScraper:
             
             # Apply filters
             if self._apply_filters(insider_data):
-                self.db_handler.write_to_db("transactions_bronze", self.field_names, tuple([insider_data[key] for key in self.field_names]))
                 data.add(tuple(insider_data.values()))
         
         # Save cache
@@ -240,6 +239,9 @@ class OpenInsiderScraper:
     def _save_data(self, data: List[tuple]) -> None:
         df = pd.DataFrame(data, columns=self.field_names)
         output_path = Path(self.config.output_dir) / self.config.output_file
+        
+        for row in data:
+            self.db_handler.write_to_db("transactions_bronze", self.field_names, tuple(row))
         
         self.db_handler.commit()
         self.db_handler.close()
