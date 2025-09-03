@@ -124,45 +124,40 @@ class OpenInsiderScraper:
         
         url = f'http://openinsider.com/screener?s=&o=&pl=&ph=&ll=&lh=&fd=-1&fdr={start_date}+-+{end_date}&td=0&tdr=&fdlyl=&fdlyh=&daysago=&xp=1&xs=1&vl=&vh=&ocl=&och=&sic1=-1&sicl=100&sich=9999&grp=0&nfl=&nfh=&nil=&nih=&nol=&noh=&v2l=&v2h=&oc2l=&oc2h=&sortcol=0&cnt=5000&page=1'
         
-        try:
-            response = self._fetch_data(url)
-            soup = BeautifulSoup(response.text, 'html.parser')
-            table = soup.find('table', {'class': 'tinytable'})
-            if not table:
-                self.logger.error(f"No table found for {month}-{year}")
-                return set()
-                
-            rows = table.find('tbody').findAll('tr')
-            data = set()
-            
-            for row in rows:
-                cols = row.findAll('td')
-                if not cols:
-                    continue
-                    
-                insider_data = {
-                    key: (cols[index].find('a').text.strip() if cols[index].find('a') 
-                        else cols[index].get_text(strip=True))
-                    
-                        for index, key in enumerate([
-                        "X", "filing_date", "trade_date", "ticker", "company_name", "insider_name", "title", "trade_type", "price", "qty", "owned", "dOwnedPc", "value"
-                    ])
-                }
-                
-                # Apply filters
-                if self._apply_filters(insider_data):
-                    data.add(tuple(insider_data.values()))
-            
-            # Save cache
-            if self.config.cache_enabled:
-                with open(cache_path, 'w') as f:
-                    json.dump([list(x) for x in data], f)
-            
-            return data
-            
-        except Exception as e:
-            self.logger.error(f"Error fetching data for {month}-{year}: {str(e)}")
+        response = self._fetch_data(url)
+        soup = BeautifulSoup(response.text, 'html.parser')
+        table = soup.find('table', {'class': 'tinytable'})
+        if not table:
+            self.logger.error(f"No table found for {month}-{year}")
             return set()
+            
+        rows = table.find('tbody').findAll('tr')
+        data = set()
+        
+        for row in rows:
+            cols = row.findAll('td')
+            if not cols:
+                continue
+                
+            insider_data = {
+                key: (cols[index].find('a').text.strip() if cols[index].find('a') 
+                    else cols[index].get_text(strip=True))
+                
+                    for index, key in enumerate([
+                    "X", "filing_date", "trade_date", "ticker", "company_name", "insider_name", "title", "trade_type", "price", "quantity", "owned", "dOwnedPc", "value"
+                ])
+            }
+            
+            # Apply filters
+            if self._apply_filters(insider_data):
+                data.add(tuple(insider_data.values()))
+        
+        # Save cache
+        if self.config.cache_enabled:
+            with open(cache_path, 'w') as f:
+                json.dump([list(x) for x in data], f)
+        
+        return data
     
     def _clean_numeric(self, value: str) -> float:
         """Clean numeric values from strings, handling currency, percentages, and text."""
@@ -180,33 +175,33 @@ class OpenInsiderScraper:
             return 0.0  # Return 0 for any non-numeric values
 
     def _apply_filters(self, data: Dict[str, str]) -> bool:
-        try:
-            # Check transaction type filter
-            if self.config.transaction_types and data['transaction_type'] not in self.config.transaction_types:
-                return False
-                
-            # Check excluded companies
-            if data['ticker'] in self.config.exclude_companies:
-                return False
-
-            # Check included companies
-            if self.config.include_companies and data['ticker'] not in self.config.include_companies:
-                return False
-
-            # Convert and check value
-            value = self._clean_numeric(data['Value'])
-            if value < self.config.min_transaction_value:
-                return False
-                
-            # Convert and check quantity
-            shares = self._clean_numeric(data['Qty'])
-            if shares < self.config.min_shares_traded:
-                return False
-            
-            return True
-        except (ValueError, KeyError) as e:
-            self.logger.warning(f"Error filtering data: {str(e)}")
+        # Check transaction type filter
+        if self.config.transaction_types and data['transaction_type'] not in self.config.transaction_types:
             return False
+            
+        # Check excluded companies
+        if data['ticker'] in self.config.exclude_companies:
+            return False
+
+        # Check included companies
+        if self.config.include_companies and data['ticker'] not in self.config.include_companies:
+            return False
+
+        # Convert and check value
+        data['owned'] = self._clean_numeric(data['owned'])
+        data['price'] = self._clean_numeric(data['price'])
+        data['dOwnedPc'] = self._clean_numeric(data['dOwnedPc'])
+        
+        data['value'] = self._clean_numeric(data['value'])
+        if data['value'] < self.config.min_transaction_value:
+            return False
+            
+        # Convert and check quantity
+        data['quantity'] = self._clean_numeric(data['quantity'])
+        if data['quantity'] < self.config.min_shares_traded:
+            return False
+        
+        return True
     
     def scrape(self) -> None:
         self.logger.info("Starting scraping process...")
@@ -231,20 +226,17 @@ class OpenInsiderScraper:
             
             with tqdm(total=len(futures), desc="Processing months") as pbar:
                 for future in as_completed(futures):
-                    try:
-                        data = future.result()
-                        all_data.extend(data)
-                        pbar.update(1)
-                    except Exception as e:
-                        self.logger.error(f"Error processing month: {str(e)}")
+                    data = future.result()
+                    all_data.extend(data)
+                    pbar.update(1)
         
         self.logger.info(f"Scraping completed. Found {len(all_data)} transactions.")
         self._save_data(all_data)
     
     def _save_data(self, data: List[tuple]) -> None:
-        field_names = ['transaction_date', 'trade_date', 'ticker', 'company_name', 
-                      'owner_name', 'Title', 'transaction_type', 'last_price', 
-                      'Qty', 'shares_held', 'Owned', 'Value']
+        field_names = [
+                    "X", "filing_date", "trade_date", "ticker", "company_name", "insider_name", "title", "trade_type", "price", "quantity", "owned", "value"
+                ]
         
         df = pd.DataFrame(data, columns=field_names)
         output_path = Path(self.config.output_dir) / self.config.output_file
