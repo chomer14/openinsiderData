@@ -13,6 +13,7 @@ import json
 from typing import Dict, List, Set, Union, Optional
 from dataclasses import dataclass
 from logging.handlers import RotatingFileHandler
+from database_handler import insider_trading_db_handler
 
 @dataclass
 class ScraperConfig:
@@ -43,6 +44,10 @@ class OpenInsiderScraper:
         self._setup_logging()
         self._setup_directories()
         self.logger = logging.getLogger('openinsider')
+        self.db_handler = insider_trading_db_handler("insider_trades.db")
+        self.field_names = [
+                    "X", "filing_date", "trade_date", "ticker", "company_name", "insider_name", "title", "trade_type", "price", "quantity", "owned", "dOwnedPc", "value"
+                ]
         
     def _load_config(self, config_path: str) -> ScraperConfig:
         with open(config_path, 'r') as f:
@@ -143,13 +148,12 @@ class OpenInsiderScraper:
                 key: (cols[index].find('a').text.strip() if cols[index].find('a') 
                     else cols[index].get_text(strip=True))
                 
-                    for index, key in enumerate([
-                    "X", "filing_date", "trade_date", "ticker", "company_name", "insider_name", "title", "trade_type", "price", "quantity", "owned", "dOwnedPc", "value"
-                ])
+                    for index, key in enumerate(self.field_names)
             }
             
             # Apply filters
             if self._apply_filters(insider_data):
+                self.db_handler.write_to_db("transactions_bronze", self.field_names, tuple([insider_data[key] for key in self.field_names]))
                 data.add(tuple(insider_data.values()))
         
         # Save cache
@@ -234,12 +238,11 @@ class OpenInsiderScraper:
         self._save_data(all_data)
     
     def _save_data(self, data: List[tuple]) -> None:
-        field_names = [
-                    "X", "filing_date", "trade_date", "ticker", "company_name", "insider_name", "title", "trade_type", "price", "quantity", "owned", "value"
-                ]
-        
-        df = pd.DataFrame(data, columns=field_names)
+        df = pd.DataFrame(data, columns=self.field_names)
         output_path = Path(self.config.output_dir) / self.config.output_file
+        
+        self.db_handler.commit()
+        self.db_handler.close()
         
         if self.config.output_format.lower() == 'csv':
             df.to_csv(output_path, index=False)
