@@ -140,10 +140,14 @@ class OpenInsiderScraper:
                 if not cols:
                     continue
                     
-                insider_data = {key: cols[index].find('a').text.strip() if cols[index].find('a') else cols[index+1].text.strip() 
-                                for index, key in enumerate(['transaction_date', 'trade_date', 'ticker', 'company_name', 
-                                                         'owner_name', 'Title', 'transaction_type', 'last_price', 'Qty', 
-                                                         'shares_held', 'Owned', 'Value'])}
+                insider_data = {
+                    key: (cols[index].find('a').text.strip() if cols[index].find('a') 
+                        else cols[index].get_text(strip=True))
+                    
+                        for index, key in enumerate([
+                        "X", "filing_date", "trade_date", "ticker", "company_name", "insider_name", "title", "trade_type", "price", "qty", "owned", "dOwnedPc", "value"
+                    ])
+                }
                 
                 # Apply filters
                 if self._apply_filters(insider_data):
