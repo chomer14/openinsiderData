@@ -7,8 +7,15 @@
 # Remove X, filing date, ticker, company name, insider name, dOwnedPc
 # replace trade type with boolean
 # add columns to relate insiders and companies
+
 import sqlite3
 from datetime import datetime
+
+# We will now have tables
+# - transactions_gold
+# - insiders_gold done
+# - companies_gold done
+
 def create_companies_table(cur: sqlite3.Cursor, conn: sqlite3.Connection):
     cur.execute(""" CREATE TABLE "companies_gold" (
                         "id"	    INTEGER NOT NULL UNIQUE,
@@ -79,3 +86,20 @@ def create_gold_transactions_table(cur: sqlite3.Cursor, conn: sqlite3.Connection
         SQL = """INSERT INTO transactions_gold (trade_date, company_id, insider_id, title, is_purchase, unit_price, unit_quantity, value) VALUES (?, ?, ?, ?, ?, ?, ?, ?)"""
         cur.execute(SQL, params)
     conn.commit()
+    
+def main():
+    conn = sqlite3.connect("insider_trades.db")
+    cur = conn.cursor()
+    
+    cur.execute("DROP TABLE IF EXISTS transactions_gold;")
+    cur.execute("DROP TABLE IF EXISTS insiders_gold;")
+    cur.execute("DROP TABLE IF EXISTS companies_gold;")
+    
+    create_companies_table(cur, conn)
+    create_insiders_table(cur, conn)
+    create_gold_transactions_table(cur, conn)
+
+    conn.close()
+
+if __name__ == "__main__":
+    main()
