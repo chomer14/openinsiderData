@@ -6,3 +6,4 @@
 
 # Remove X, filing date, ticker, company name, insider name, dOwnedPc
 # replace trade type with boolean
+# add columns to relate insiders and companies
