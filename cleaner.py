@@ -74,14 +74,14 @@ def create_gold_transactions_table(cur: sqlite3.Cursor, conn: sqlite3.Connection
         company_id = cur.fetchone()[0]
         cur.execute("SELECT id FROM insiders_gold WHERE name=?", (transaction[2],))
         insider_id = cur.fetchone()[0]
-        is_purchase = transaction[4].lower()[0] == "p"
-        unit_price = transaction[5]
-        unit_quantity = transaction[6]
+        is_purchase = transaction[3].lower()[0] == "p"
+        unit_price = transaction[4]
+        unit_quantity = transaction[5]
         value = unit_price * unit_quantity
         
         params = (trade_date, company_id, insider_id, is_purchase, unit_price, unit_quantity, value)
         
-        SQL = """INSERT INTO transactions_gold (trade_date, company_id, insider_id, is_purchase, unit_price, unit_quantity, value) VALUES (?, ?, ?, ?, ?, ?, ?, ?)"""
+        SQL = """INSERT INTO transactions_gold (trade_date, company_id, insider_id, is_purchase, unit_price, unit_quantity, value) VALUES (?, ?, ?, ?, ?, ?, ?)"""
         cur.execute(SQL, params)
     conn.commit()
    
