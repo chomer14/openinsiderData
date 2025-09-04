@@ -56,7 +56,6 @@ def create_gold_transactions_table(cur: sqlite3.Cursor, conn: sqlite3.Connection
                         "trade_date"	INTEGER,
                         "company_id"	INTEGER,
                         "insider_id"	INTEGER,
-                        "title"	        TEXT,
                         "is_purchase"	INTEGER,
                         "unit_price"	REAL,
                         "unit_quantity"	REAL,
@@ -65,7 +64,7 @@ def create_gold_transactions_table(cur: sqlite3.Cursor, conn: sqlite3.Connection
                     )""")
     
     # populate transactions table
-    cur.execute("SELECT trade_date, ticker, insider_name, title, trade_type, price, quantity, value FROM transactions_bronze;")
+    cur.execute("SELECT trade_date, ticker, insider_name, trade_type, price, quantity, value FROM transactions_bronze;")
     transactions = cur.fetchall()
     
     for transaction in transactions:
@@ -75,26 +74,38 @@ def create_gold_transactions_table(cur: sqlite3.Cursor, conn: sqlite3.Connection
         company_id = cur.fetchone()[0]
         cur.execute("SELECT id FROM insiders_gold WHERE name=?", (transaction[2],))
         insider_id = cur.fetchone()[0]
-        title = transaction[3]
         is_purchase = transaction[4].lower()[0] == "p"
         unit_price = transaction[5]
         unit_quantity = transaction[6]
         value = unit_price * unit_quantity
         
-        params = (trade_date, company_id, insider_id, title, is_purchase, unit_price, unit_quantity, value)
+        params = (trade_date, company_id, insider_id, is_purchase, unit_price, unit_quantity, value)
         
-        SQL = """INSERT INTO transactions_gold (trade_date, company_id, insider_id, title, is_purchase, unit_price, unit_quantity, value) VALUES (?, ?, ?, ?, ?, ?, ?, ?)"""
+        SQL = """INSERT INTO transactions_gold (trade_date, company_id, insider_id, is_purchase, unit_price, unit_quantity, value) VALUES (?, ?, ?, ?, ?, ?, ?, ?)"""
         cur.execute(SQL, params)
+    conn.commit()
+   
+def create_transactions_titles_table(cur: sqlite3.Cursor, conn: sqlite3.Connection):
+    cur.execute(""" CREATE TABLE "transactions_titles_gold" (
+                        "id"	            INTEGER NOT NULL UNIQUE,
+                        "transaction_id"	INTEGER,
+                        "title"	            TEXT,
+                        "insider_id"	    INTEGER,
+                        PRIMARY KEY("id" AUTOINCREMENT)
+                    )""")
     conn.commit()
     
 def main():
     conn = sqlite3.connect("insider_trades.db")
     cur = conn.cursor()
     
+    
+    cur.execute("DROP TABLE IF EXISTS transactions_titles_gold;")
     cur.execute("DROP TABLE IF EXISTS transactions_gold;")
     cur.execute("DROP TABLE IF EXISTS insiders_gold;")
     cur.execute("DROP TABLE IF EXISTS companies_gold;")
     
+    create_transactions_titles_table(cur, conn)
     create_companies_table(cur, conn)
     create_insiders_table(cur, conn)
     create_gold_transactions_table(cur, conn)
