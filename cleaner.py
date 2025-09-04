@@ -27,3 +27,18 @@ def create_companies_table(cur: sqlite3.Cursor, conn: sqlite3.Connection):
         company_name = cur.fetchone()[0]
         cur.execute("INSERT INTO companies_gold (ticker, name) VALUES (?, ?)", (ticker_symbol, company_name,))
     conn.commit()
+
+def create_insiders_table(cur: sqlite3.Cursor, conn: sqlite3.Connection):
+    cur.execute(""" CREATE TABLE "insiders_gold" (
+                        "id"	INTEGER NOT NULL UNIQUE,
+                        "name"	TEXT,
+                        PRIMARY KEY("id" AUTOINCREMENT)
+                    )""")
+    # populate insider table
+    cur.execute("SELECT DISTINCT insider_name FROM transactions_bronze")
+    insiders = cur.fetchall()
+    
+    for insider in insiders:
+        name = insider[0]
+        cur.execute("INSERT INTO insiders_gold (name) VALUES (?)", (name,))
+    conn.commit()
