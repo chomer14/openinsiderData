@@ -44,7 +44,6 @@ class OpenInsiderScraper:
         self._setup_logging()
         self._setup_directories()
         self.logger = logging.getLogger('openinsider')
-        self.db_handler = insider_trading_db_handler("insider_trades.db")
         self.field_names = [
                     "X", "filing_date", "trade_date", "ticker", "company_name", "insider_name", "title", "trade_type", "price", "quantity", "owned", "dOwnedPc", "value"
                 ]
@@ -240,8 +239,9 @@ class OpenInsiderScraper:
         df = pd.DataFrame(data, columns=self.field_names)
         output_path = Path(self.config.output_dir) / self.config.output_file
         
+        self.db_handler = insider_trading_db_handler("transactions_bronze", "insider_trades.db")
         for row in data:
-            self.db_handler.write_to_db("transactions_bronze", self.field_names, tuple(row))
+            self.db_handler.write_to_db(self.field_names, tuple(row))
         
         self.db_handler.commit()
         self.db_handler.close()

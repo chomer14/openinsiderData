@@ -47,3 +47,4 @@ data/
 Thumbs.db
 
 *.db
+*.db-journal
