@@ -64,7 +64,7 @@ def create_gold_transactions_table(cur: sqlite3.Cursor, conn: sqlite3.Connection
                     )""")
     
     # populate transactions table
-    cur.execute("SELECT trade_date, ticker, insider_name, trade_type, price, quantity, value FROM transactions_bronze;")
+    cur.execute("SELECT trade_date, ticker, insider_name, trade_type, price, quantity, value, title FROM transactions_bronze;")
     transactions = cur.fetchall()
     
     for transaction in transactions:
@@ -83,6 +83,13 @@ def create_gold_transactions_table(cur: sqlite3.Cursor, conn: sqlite3.Connection
         
         SQL = """INSERT INTO transactions_gold (trade_date, company_id, insider_id, is_purchase, unit_price, unit_quantity, value) VALUES (?, ?, ?, ?, ?, ?, ?)"""
         cur.execute(SQL, params)
+        
+        cur.execute("SELECT last_insert_rowid()")
+        transaction_id = cur.fetchone()[0]
+        
+        _titles = [title.strip() for title in transaction[7].split(",")]
+        for _title in _titles:
+            cur.execute("INSERT INTO transactions_titles_gold (transaction_id, title, insider_id) VALUES(?, ? , ?)", (transaction_id, _title, insider_id,))
     conn.commit()
    
 def create_transactions_titles_table(cur: sqlite3.Cursor, conn: sqlite3.Connection):
