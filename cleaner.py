@@ -60,7 +60,9 @@ def create_gold_transactions_table(cur: sqlite3.Cursor, conn: sqlite3.Connection
                         "unit_price"	REAL,
                         "unit_quantity"	REAL,
                         "value"	        REAL,
-                        PRIMARY KEY("id" AUTOINCREMENT)
+                        PRIMARY KEY("id" AUTOINCREMENT),
+                        FOREIGN KEY (company_id) REFERENCES companies_gold(id),
+                        FOREIGN KEY (insider_id) REFERENCES insiders_gold(id)
                     )""")
     
     # populate transactions table
@@ -98,7 +100,9 @@ def create_transactions_titles_table(cur: sqlite3.Cursor, conn: sqlite3.Connecti
                         "transaction_id"	INTEGER,
                         "title"	            TEXT,
                         "insider_id"	    INTEGER,
-                        PRIMARY KEY("id" AUTOINCREMENT)
+                        PRIMARY KEY("id" AUTOINCREMENT),
+                        FOREIGN KEY (transaction_id) REFERENCES transactions_gold(id),
+                        FOREIGN KEY (insider_id) REFERENCES insiders_gold(id)
                     )""")
     conn.commit()
     
@@ -116,6 +120,15 @@ def main():
     create_companies_table(cur, conn)
     create_insiders_table(cur, conn)
     create_gold_transactions_table(cur, conn)
+    
+    cur.execute("CREATE INDEX idx_transactions_titles_gold_id ON transactions_titles_gold(id);")
+    
+    cur.execute("CREATE INDEX idx_transactions_gold_company_id ON transactions_gold(company_id);")
+    cur.execute("CREATE INDEX idx_transactions_gold_insider_id ON transactions_gold(insider_id);")
+    
+    cur.execute("CREATE INDEX idx_transactions_titles_gold_transaction_id ON transactions_titles_gold(transaction_id);")
+    cur.execute("CREATE INDEX idx_transactions_titles_gold_insider_id ON transactions_titles_gold(insider_id);")
+    conn.commit()
 
     conn.close()
 
