@@ -79,7 +79,7 @@ def create_gold_transactions_table(cur: sqlite3.Cursor, conn: sqlite3.Connection
         is_purchase = transaction[3].lower()[0] == "p"
         unit_price = transaction[4]
         unit_quantity = transaction[5]
-        value = unit_price * unit_quantity
+        value = transaction[6]
         
         params = (trade_date, company_id, insider_id, is_purchase, unit_price, unit_quantity, value)
         
